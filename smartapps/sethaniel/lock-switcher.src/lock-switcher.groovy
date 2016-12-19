@@ -29,6 +29,8 @@ preferences {
 		input(name: "physicalLock", type: "capability.lock", required: true, title: "Select the lock that will be monitored")
         input(name: "notify", type: "bool", required: false, title: "Send notifications when the lock is locked or unlocked?")
         input(name: "simulatedSwitch", type: "capability.switch", required: true, title: "Select the simulated switch that will monitor and control the lock.")
+        input(name: "switchCanLock", type: "bool", title: "Should the switch be allowed to lock the lock?")
+        input(name: "switchCanUnlock", type: "bool", title: "Should the switch be allowed to unlock the lock? You may want to disable this if you want voice systems to be able to tell you the status of the lock but not able to unlock the lock")
 	}
 }
 
@@ -60,7 +62,7 @@ def physicalLockHandler(evt) {
     
     if (evt.stringValue == "locked") {
     	if (simulatedSwitch.currentValue("switch") != "on") {
-        	simulatedSwitch.on()
+            simulatedSwitch.on()
         }
     } else { 
         if (simulatedSwitch.currentValue("switch") != "off") {
@@ -78,12 +80,22 @@ def simulatedSwitchHandler(evt) {
     
     if (evt.stringValue == "on") {
     	if (physicalLock.currentValue("lock") != "locked") {
-        	physicalLock.lock()
+        	if (switchCanLock) {
+        		physicalLock.lock()
+            } else {
+            	// since the switch can't lock the lock, change the switch to match the lock
+            	simulatedSwitch.off()
+            }
         }
     } else { 
         if (physicalLock.currentValue("lock") != "unlocked"
         && physicalLock.currentValue("lock") != "unlocked with timeout") {
-    		physicalLock.unlock()
+        	if (switchCanUnlock) {
+    			physicalLock.unlock()
+            } else {
+            	// since the switch can't unlock the lock, change the switch to match the lock
+            	simulatedSwitch.on()
+            }
         }
     }
 }
